@@ -23,7 +23,7 @@ A graph of the result of the validation square error.
 The value of the optimal validation and test square errors.  
 A written comparison of the results of this experiment and the previous ones. 
 
-![]([homework51.png)
+![graph](homework51.png)
 
 NOTE: The csv file is for Python users. The structure of the data is: 
 
