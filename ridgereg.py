@@ -84,7 +84,7 @@ gammas = []
 losses = []
 errors = []
 
-iterations = 200
+iterations = 5000
 
 # vary gamma from 10^-2 to 10^1
 for p in np.linspace(-2,1,num=100):
