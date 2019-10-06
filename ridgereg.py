@@ -3,6 +3,7 @@ import pandas as pd
 from numpy.linalg import inv
 import random
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 # read the data file
 df = pd.read_csv("data.csv", header=None)
@@ -39,7 +40,7 @@ errors = np.zeros((ngamma+1,))
 idx=list(range(0,len(ytrain)))
 split=len(idx)*8//10
 
-for i in range(0,iterations):
+for i in tqdm(range(0,iterations)):
 	# shuffle the data indexes
 	random.shuffle(idx)
 	# split train and test samples
