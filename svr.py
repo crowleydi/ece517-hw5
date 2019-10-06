@@ -1,9 +1,9 @@
 import numpy as np
 import pandas as pd
-from numpy.linalg import inv
 import random
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from sklearn import svm
 
 # read the data file
 df = pd.read_csv("data.csv", header=None)
@@ -34,7 +34,6 @@ C = 1
 
 # values for plotting gamma vs. error, etc.
 gammas = np.zeros((ngamma+1,))
-losses = np.zeros((ngamma+1,))
 errors = np.zeros((ngamma+1,))
 
 # calculate ranges for 80/20 split
@@ -53,9 +52,6 @@ for i in tqdm(range(0,iterations)):
 	te=idx[split:]
 	Xte = Xtrain[:,te]
 	yte = ytrain[te]
-	#
-	# calculate the K (kernel) matrix
-	K = np.matmul(Xtr.T,Xtr)
 
 	# vary gamma from 10^-2 to 10^1
 	pmin = -2
@@ -64,50 +60,26 @@ for i in tqdm(range(0,iterations)):
 		gamma = 10**(j*(pmax-pmin)/ngamma+pmin)
 		gammas[j] = gamma
 
-		# calculate the dual space coefficients
-		alpha = np.matmul(inv(K + gamma*np.eye(len(K))),ytr)
-		# calculate the weights
-		w = np.matmul(Xtr,alpha)
-		# calculate the prediction
-		yhat = np.matmul(w.T,Xte)
-		# calculate error
+		clf = svm.SVR(gamma=gamma)
+		clf.fit(Xtr.T, ytr)
+		yhat = clf.predict(Xte.T)
 		e = yte - yhat
-		# calculate the error^2
 		e2 = np.dot(e,e)/len(yhat)
-		# calculate the loss
-		loss = e2 + C*np.dot(w,w)
-
 		errors[j] = errors[j] + e2
-		losses[j] = losses[j] + loss
 
 # now find the lowest error/gamma
 lowe = np.inf
 errors = errors / iterations
-losses = losses / iterations
 for i in range(0,len(gammas)):
 	if (errors[i] < lowe):
 		lowe = errors[i]
 		gamma = gammas[i]
 
-# we know the best gamma, so build a machine from
-# entire training set and test
-# calculate the K (kernel) matrix
-K = np.matmul(Xtrain.T,Xtrain)
-# calculate coefficients
-alpha = np.matmul(inv(K + gamma*np.eye(len(K))),ytrain)
-w = np.matmul(Xtrain,alpha)
-# now test it against the full test set
-yhat = np.matmul(w.T,Xtest)
+clf = svm.SVR(gamma=gamma)
+clf.fit(Xtrain.T, ytrain)
+yhat = clf.predict(Xtest.T)
 e = ytest - yhat
 e2 = np.dot(e,e)/len(ytest)
-
-#plt.plot(gammas,losses,label="Loss")
-#plt.scatter([gamma],[lowe])
-#plt.xlabel("$\gamma$")
-#plt.ylabel("$e^2$")
-#plt.xscale(value="log")
-#plt.suptitle("Training Loss vs. $\gamma$")
-#plt.show()
 
 plt.plot(gammas,errors,label="Error")
 #plt.plot(gammas,losses,label="Loss")
