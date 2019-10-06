@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 from sklearn import svm
 
+Classifier = svm.NuSVR
+cname = "NuSVR"
+
 # read the data file
 df = pd.read_csv("data.csv", header=None)
 
@@ -60,7 +63,7 @@ for i in tqdm(range(0,iterations)):
 		gamma = 10**(j*(pmax-pmin)/ngamma+pmin)
 		gammas[j] = gamma
 
-		clf = svm.SVR(gamma=gamma)
+		clf = Classifier(gamma=gamma)
 		clf.fit(Xtr.T, ytr)
 		yhat = clf.predict(Xte.T)
 		e = yte - yhat
@@ -75,7 +78,7 @@ for i in range(0,len(gammas)):
 		lowe = errors[i]
 		gamma = gammas[i]
 
-clf = svm.SVR(gamma=gamma)
+clf = Classifier(gamma=gamma)
 clf.fit(Xtrain.T, ytrain)
 yhat = clf.predict(Xtest.T)
 e = ytest - yhat
@@ -88,7 +91,7 @@ plt.xlabel("$\gamma$")
 plt.ylabel("$e^2$")
 plt.xscale(value="log")
 #plt.legend()
-plt.suptitle("Training Mean Square Error vs. $\gamma$")
+plt.suptitle("%s Training Mean Square Error vs. $\gamma$"%(cname))
 plt.title("min at $\gamma=%.3f, e^2=%.3g$"%(gamma,lowe),fontsize=10)
 plt.show()
 
@@ -97,6 +100,6 @@ plt.plot(time,ytest,label="$y_{test}$")
 plt.plot(time,yhat,label="$\hat{y}$")
 plt.xlabel("Time")
 plt.legend()
-plt.suptitle("Real vs. Predicted")
+plt.suptitle("%s Real vs. Predicted"%(cname))
 plt.title("$\gamma=%.3f,e^2=%.3g$"%(gamma,e2),fontsize=10)
 plt.show()
