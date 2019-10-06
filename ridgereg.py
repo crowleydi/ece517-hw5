@@ -27,90 +27,87 @@ Xtest = np.append(Xtest,np.ones((len(ytest),1)),axis=1).T
 # is a scale of the trace
 #trace = np.trace(K)
 
-def train_calc_error(gamma, Xtrain, ytrain, Xtest, ytest):
+iterations = 500
+ngamma = 100
+
+# values for plotting gamma vs. error, etc.
+gammas = np.zeros((ngamma+1,))
+losses = np.zeros((ngamma+1,))
+errors = np.zeros((ngamma+1,))
+
+# calculate ranges for 80/20 split
+idx=list(range(0,len(ytrain)))
+split=len(idx)*8//10
+
+for i in range(0,iterations):
+	# shuffle the data indexes
+	random.shuffle(idx)
+	# split train and test samples
+	# training portion
+	tr=idx[0:split]
+	Xtr = Xtrain[:,tr]
+	ytr = ytrain[tr]
+	# testing portion
+	te=idx[split:]
+	Xte = Xtrain[:,te]
+	yte = ytrain[te]
 	#
 	# calculate the K (kernel) matrix
-	K = np.matmul(Xtrain.T,Xtrain)
-	# calculate the dual space coefficients
-	alpha = np.matmul(inv(K + gamma*np.eye(len(K))),ytrain)
-	# calculate the weights
-	w = np.matmul(Xtrain,alpha)
-	# calculate the prediction
-	yhat = np.matmul(w.T,Xtest)
-	# calculate error
-	e = ytest - yhat
-	# calculate the error^2
-	e2 = np.dot(e,e)
-	# calculate the loss
-	loss = e2/len(yhat) + gamma*np.dot(w,w)
-	return e2, loss, yhat
+	K = np.matmul(Xtr.T,Xtr)
 
-# for a given gamma, X, and y,
-# split data randomly 80/20 into train and test 
-# calculate the average error, and loss of
-# the trained machine on the test data
-def calc_avg_error(gamma, X, y, iterations):
-	#
-	# split the training data into an 80/20
-	# split between train and test
-	idx=list(range(0,len(y)))
-	split=len(idx)*8//10
+	# vary gamma from 10^-2 to 10^1
+	pmin = -2
+	pmax = 1
+	for j in range(0,ngamma+1):
+		gamma = 10**(j*(pmax-pmin)/ngamma+pmin)
+		gammas[j] = gamma
 
-	etotal = 0
-	losstotal = 0
-	for i in range(0,iterations):
-		# shuffle the data
-		random.shuffle(idx)
-		# determine train and test samples
-		train=idx[0:split]
-		test=idx[split:]
-		Xtrain = X[:,train]
-		ytrain = y[train]
-		Xtest = X[:,test]
-		ytest = y[test]
+		# calculate the dual space coefficients
+		alpha = np.matmul(inv(K + gamma*np.eye(len(K))),ytr)
+		# calculate the weights
+		w = np.matmul(Xtr,alpha)
+		# calculate the prediction
+		yhat = np.matmul(w.T,Xte)
+		# calculate error
+		e = yte - yhat
+		# calculate the error^2
+		e2 = np.dot(e,e)/len(yhat)
+		# calculate the loss
+		loss = e2 + gamma*np.dot(w,w)
 
-		e, loss, yhat = train_calc_error(gamma, Xtrain, ytrain, Xtest, ytest)
-		etotal = etotal + e
-		losstotal = losstotal + loss
+		errors[j] = errors[j] + e2
+		losses[j] = losses[j] + loss
 
-	return etotal/iterations, losstotal/iterations
-
-#
-#
-# keep track of the best
-# value for gamma
-beste = 1e6;
-gammas = []
-losses = []
-errors = []
-
-iterations = 5000
-
-# vary gamma from 10^-2 to 10^1
-for p in np.linspace(-2,1,num=100):
-	gamma = 10**p
-
-	e2,loss = calc_avg_error(gamma, Xtrain, ytrain, iterations)
-
-	# save values for plots
-	gammas.append(gamma)
-	errors.append(e2)
-	losses.append(loss)
-
-	# keep track of the best values
-	if (e2 < beste):
-		beste = e2
-		bestgamma = gamma
+# now find the lowest error/gamma
+lowe = np.inf
+errors = errors / iterations
+losses = losses / iterations
+for i in range(0,len(gammas)):
+	if (errors[i] < lowe):
+		lowe = errors[i]
+		gamma = gammas[i]
 
 # we know the best gamma, so build a machine from
 # entire training set and test
-e2, loss, yhat = train_calc_error(bestgamma, Xtrain, ytrain, Xtest, ytest)
+# calculate the K (kernel) matrix
+K = np.matmul(Xtrain.T,Xtrain)
+# calculate coefficients
+alpha = np.matmul(inv(K + gamma*np.eye(len(K))),ytrain)
+w = np.matmul(Xtrain,alpha)
+# now test it against the full test set
+yhat = np.matmul(w.T,Xtest)
+e = ytest - yhat
+e2 = np.dot(e,e)/len(ytest)
 
 plt.plot(gammas,errors,label="Error")
+#plt.plot(gammas,losses,label="Loss")
+plt.scatter([gamma],[lowe])
 plt.xlabel("$\gamma$")
 plt.ylabel("$e^2$")
 plt.xscale(value="log")
-plt.title("Average Error vs. $\gamma$ (%d iterations)"%(iterations))
+#plt.legend()
+plt.suptitle("Mean Square Error vs. $\gamma$")
+plt.title("At $\gamma=%.3f, e^2=%.3g$"%(gamma,lowe))
 plt.show()
 
 time = list(range(0,len(yhat)))
@@ -118,5 +115,5 @@ plt.plot(time,ytest,label="$y_{test}$")
 plt.plot(time,yhat,label="$\hat{y}$")
 plt.xlabel("Time")
 plt.legend()
-plt.title("Real vs. Predicted ($\gamma=%.3f,e^2=%.2f$)"%(bestgamma,e2))
+plt.title("Real vs. Predicted ($\gamma=%.3f,e^2=%.3g$)"%(gamma,e2))
 plt.show()
